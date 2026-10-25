@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2438D6">
+<meta name="description" content="Mark Bench: design a logo from a symbol, a name and a palette, then save it as PNG or SVG.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Mark Bench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bebas+Neue&family=Bricolage+Grotesque:wght@500;700&family=Cormorant+Garamond:wght@500;700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Fraunces:wght@500;700&family=Oswald:wght@500;700&family=Pacifico&family=Playfair+Display:wght@500;700&family=Poppins:wght@500;700&family=Righteous&family=Space+Mono:wght@400;700&family=Syne:wght@500;700&display=swap">
+<style>
+/* Layout: a drafting bench. Logo stage on the left (sticky), tabbed controls on the right.
+   On phones the stage pins to the top so the mark stays visible while you adjust it. */
+:root{
+  --bg:#EDEFF3; --panel:#FFFFFF; --ink:#151A22; --muted:#5B6574; --line:#D3D9E2;
+  --grid:rgba(21,26,34,.07); --accent:#2438D6; --accent-ink:#FFFFFF; --soft:#F3F5F8;
+  --chk1:#E1E5EB; --chk2:#F6F7F9;
+  --font-ui:'DM Sans',system-ui,sans-serif;
+  --font-display:'Bricolage Grotesque','DM Sans',system-ui,sans-serif;
+  --font-mono:'DM Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1319; --panel:#171C24; --ink:#E9ECF2; --muted:#9BA5B4; --line:#2B333F;
+    --grid:rgba(233,236,242,.06); --accent:#8EA0FF; --accent-ink:#0F1319; --soft:#1D232C;
+    --chk1:#222831; --chk2:#1A1F27; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1319; --panel:#171C24; --ink:#E9ECF2; --muted:#9BA5B4; --line:#2B333F;
+  --grid:rgba(233,236,242,.06); --accent:#8EA0FF; --accent-ink:#0F1319; --soft:#1D232C;
+  --chk1:#222831; --chk2:#1A1F27; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font:15px/1.45 var(--font-ui);
+  padding-block:20px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+.shell{max-width:1120px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;margin-bottom:16px}
+h1{font:700 26px/1.1 var(--font-display);letter-spacing:-.01em;margin:0}
+header p{margin:0;color:var(--muted);font-size:14px;min-width:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.stagecol{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px;min-width:0}
+.sticky{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{
+  height:clamp(260px,52vh,460px);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background-color:var(--panel);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;display:flex;align-items:center;justify-content:center;padding:14px;
+}
+.stage.chk{background-image:linear-gradient(45deg,var(--chk1) 25%,transparent 25%,transparent 75%,var(--chk1) 75%),linear-gradient(45deg,var(--chk1) 25%,var(--chk2) 25%,var(--chk2) 75%,var(--chk1) 75%);background-size:20px 20px;background-position:0 0,10px 10px}
+.stage svg{display:block;max-width:100%;max-height:100%;width:auto;height:auto;min-width:0}
+.stage .art{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.stage .art svg{width:100%;height:100%}
+
+.exports{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:9px 14px;font-weight:500;min-height:42px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[disabled]{opacity:.5;cursor:default}
+.exports select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:9px 10px;min-height:42px}
+.status{min-height:20px;margin:0;font-size:13px;color:var(--muted)}
+.svgout{width:100%;height:96px;font:12px/1.4 var(--font-mono);border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px}
+
+.minis{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.mini{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.mini .tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;align-items:center}
+.mini span{font:400 11px var(--font-mono);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.lbl{font:500 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:7px 11px;font-size:14px;min-height:38px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:10px 12px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabpanel{display:flex;flex-direction:column;gap:16px}
+.tabpanel[hidden]{display:none!important}
+.group{display:flex;flex-direction:column;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.glyphs{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px}
+.glyph{aspect-ratio:1;border:1px solid var(--line);background:var(--soft);border-radius:8px;padding:9px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.glyph svg{width:100%;height:100%}
+.glyph[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field .row{display:flex;justify-content:space-between;gap:8px}
+.field label,.check{font-size:14px}
+.field output{font:400 12px var(--font-mono);color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:28px}
+input[type=text],select.full{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;min-height:42px}
+.check{display:flex;align-items:center;gap:8px;min-height:32px}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.checks{display:flex;flex-wrap:wrap;gap:4px 18px}
+.pals{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px}
+.pal{border:1px solid var(--line);border-radius:8px;padding:6px;height:56px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start}
+.pal[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.pal i{display:block;width:18px;height:18px;border-radius:50%}
+.pal b{display:block;width:60%;height:5px;border-radius:2px}
+.colors{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.colors label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.colors input{width:100%;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px}
+.note{font-size:13px;color:var(--muted);margin:0}
+
+@media (max-width:899px){
+  .wrap{display:flex;flex-direction:column;gap:12px}
+  .stagecol{display:contents}
+  .sticky{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:4px 8px}
+  .stage{height:clamp(150px,27vh,260px)}
+  h1{font-size:22px}
+}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.glyph{transition:border-color .12s,background-color .12s}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>Mark Bench</h1>
+    <p>Build a logo from a symbol, a name and a palette, then save it as PNG or SVG.</p>
+  </header>
+
+  <div class="wrap">
+    <section class="stagecol" aria-label="Logo preview">
+      <div class="sticky">
+        <div class="stage" id="stage"><div class="art" id="art" role="img" aria-label="Logo preview"></div></div>
+        <div class="exports">
+          <button class="btn primary" id="dlPng" type="button" disabled>Save PNG</button>
+          <select id="pxsize" aria-label="PNG width">
+            <option value="512">512 px</option>
+            <option value="1024">1024 px</option>
+            <option value="2048" selected>2048 px</option>
+            <option value="4096">4096 px</option>
+          </select>
+          <button class="btn" id="dlSvg" type="button" disabled>Save SVG</button>
+          <button class="btn" id="copySvg" type="button">Copy SVG</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </div>
+      <textarea class="svgout" id="svgout" hidden readonly aria-label="SVG code"></textarea>
+      <div class="minis" id="minis">
+        <div class="mini"><div class="tile" id="m1"></div><span>Header 56 px</span></div>
+        <div class="mini"><div class="tile" id="m2"></div><span>App icon 36 px</span></div>
+        <div class="mini"><div class="tile" id="m3"></div><span>Favicon 20 px</span></div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Logo controls">
+      <div class="lbl">Start from a style</div>
+      <div class="presets" id="presets"></div>
+
+      <div class="tabs" role="tablist" id="tabs">
+        <button class="tab" role="tab" id="t-symbol" aria-controls="tab-symbol" aria-selected="true" data-tab="symbol" type="button">Symbol</button>
+        <button class="tab" role="tab" id="t-text" aria-controls="tab-text" aria-selected="false" data-tab="text" type="button">Text</button>
+        <button class="tab" role="tab" id="t-color" aria-controls="tab-color" aria-selected="false" data-tab="color" type="button">Color</button>
+        <button class="tab" role="tab" id="t-layout" aria-controls="tab-layout" aria-selected="false" data-tab="layout" type="button">Layout</button>
+      </div>
+
+      <div class="tabpanel" id="tab-symbol" role="tabpanel" aria-labelledby="t-symbol">
+        <div class="group"><div class="lbl">Symbol</div><div class="glyphs" id="glyphs"></div></div>
+        <div class="group"><div class="lbl">Container</div><div class="chips" id="shapes"></div></div>
+        <label class="check" for="outline"><input type="checkbox" id="outline"> Outline only</label>
+        <div class="group" id="sl-symbol"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-text" role="tabpanel" aria-labelledby="t-text" hidden>
+        <div class="field"><label for="brand">Name</label><input type="text" id="brand" maxlength="40" autocomplete="off"></div>
+        <div class="field"><label for="tagline">Tagline (optional)</label><input type="text" id="tagline" maxlength="48" autocomplete="off"></div>
+        <div class="field"><label for="font">Typeface</label><select class="full" id="font"></select></div>
+        <div class="checks">
+          <label class="check" for="bold"><input type="checkbox" id="bold"> Bold</label>
+          <label class="check" for="upper"><input type="checkbox" id="upper"> Capitals</label>
+        </div>
+        <div class="group" id="sl-text"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-color" role="tabpanel" aria-labelledby="t-color" hidden>
+        <div class="group"><div class="lbl">Palettes</div><div class="pals" id="pals"></div></div>
+        <div class="colors" id="colors"></div>
+        <label class="check" for="transparent"><input type="checkbox" id="transparent"> Transparent background</label>
+        <div class="group" id="sl-color"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-layout" role="tabpanel" aria-labelledby="t-layout" hidden>
+        <div class="group"><div class="lbl">Arrangement</div><div class="chips" id="layouts"></div></div>
+        <div class="group" id="sl-layout"></div>
+        <p class="note">The preview below the logo shows how it holds up when small. If the symbol turns to mush at 20 px, simplify it.</p>
+      </div>
+
+      <div style="margin-top:18px"><button class="btn" id="shuffle" type="button">Shuffle ideas</button></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){ return document.querySelector(s); };
+
+  /* ---------- Data ---------- */
+  function starPath(){
+    var pts=[], i, r, a;
+    for(i=0;i<10;i++){ r = i%2===0 ? 47 : 19.5; a = -Math.PI/2 + i*Math.PI/5;
+      pts.push((50+r*Math.cos(a)).toFixed(1)+' '+(53+r*Math.sin(a)).toFixed(1)); }
+    return 'M'+pts.join('L')+'Z';
+  }
+  function sunPath(){
+    var d='M32 50a18 18 0 1 0 36 0a18 18 0 1 0 -36 0Z', i, a, pts;
+    for(i=0;i<8;i++){
+      a=i*Math.PI/4;
+      pts=[[-4,-46],[4,-46],[4,-30],[-4,-30]].map(function(p){
+        return (50+p[0]*Math.cos(a)-p[1]*Math.sin(a)).toFixed(1)+' '+(50+p[0]*Math.sin(a)+p[1]*Math.cos(a)).toFixed(1);
+      });
+      d+='M'+pts.join('L')+'Z';
+    }
+    return d;
+  }
+  var GLYPHS = [
+    {id:'wave', name:'Wave', d:'M4 44C20 28 34 28 50 44C66 60 80 60 96 44V58C80 74 66 74 50 58C34 42 20 42 4 58Z M4 70C20 54 34 54 50 70C66 86 80 86 96 70V84C80 100 66 100 50 84C34 68 20 68 4 84Z'},
+    {id:'leaf', name:'Leaf', d:'M50 6C80 20 90 52 74 76C66 88 56 94 50 94C44 94 34 88 26 76C10 52 20 20 50 6Z M47 34H53V84H47Z'},
+    {id:'mountain', name:'Mountain', d:'M4 86L38 24L56 56L68 38L96 86Z'},
+    {id:'bolt', name:'Bolt', d:'M58 4L16 56H44L38 96L84 40H56Z'},
+    {id:'star', name:'Star', d:starPath()},
+    {id:'drop', name:'Drop', d:'M50 4C50 4 18 42 18 64C18 82 32 96 50 96C68 96 82 82 82 64C82 42 50 4 50 4Z'},
+    {id:'flame', name:'Flame', d:'M52 4C54 24 74 34 74 58C74 78 64 96 50 96C34 96 24 82 26 64C28 50 38 44 40 30C46 36 48 44 46 50C54 42 56 24 52 4Z'},
+    {id:'heart', name:'Heart', d:'M50 90C50 90 8 62 8 34C8 18 20 8 33 8C42 8 48 13 50 20C52 13 58 8 67 8C80 8 92 18 92 34C92 62 50 90 50 90Z'},
+    {id:'crown', name:'Crown', d:'M6 76L12 24L34 48L50 12L66 48L88 24L94 76Z M6 84H94V94H6Z'},
+    {id:'ring', name:'Ring', d:'M4 50a46 46 0 1 0 92 0a46 46 0 1 0 -92 0Z M28 50a22 22 0 1 0 44 0a22 22 0 1 0 -44 0Z'},
+    {id:'book', name:'Book', d:'M50 20C38 12 20 12 6 18V84C20 78 38 78 50 86C62 78 80 78 94 84V18C80 12 62 12 50 20Z M48 28H52V80H48Z'},
+    {id:'paw', name:'Paw', d:'M50 54C34 54 24 68 24 78C24 88 34 92 50 92C66 92 76 88 76 78C76 68 66 54 50 54Z M11 38a9 12 0 1 0 18 0a9 12 0 1 0 -18 0Z M29 22a9 12 0 1 0 18 0a9 12 0 1 0 -18 0Z M53 22a9 12 0 1 0 18 0a9 12 0 1 0 -18 0Z M71 38a9 12 0 1 0 18 0a9 12 0 1 0 -18 0Z'},
+    {id:'spark', name:'Spark', d:'M50 4C54 32 68 46 96 50C68 54 54 68 50 96C46 68 32 54 4 50C32 46 46 32 50 4Z'},
+    {id:'gem', name:'Gem', d:'M26 12H74L96 38L50 92L4 38Z M30 38L50 74L70 38Z'},
+    {id:'sun', name:'Sun', d:sunPath()},
+    {id:'initial', name:'Initial', d:''},
+    {id:'none', name:'No symbol', d:''}
+  ];
+  var GMAP = {}; GLYPHS.forEach(function(g){ GMAP[g.id]=g; });
+
+  var SHAPES = [
+    {id:'none', name:'None', d:''},
+    {id:'circle', name:'Circle', d:'M2 50a48 48 0 1 0 96 0a48 48 0 1 0 -96 0Z'},
+    {id:'square', name:'Square', d:'M4 4H96V96H4Z'},
+    {id:'rounded', name:'Rounded', d:'M26 4H74A22 22 0 0 1 96 26V74A22 22 0 0 1 74 96H26A22 22 0 0 1 4 74V26A22 22 0 0 1 26 4Z'},
+    {id:'hexagon', name:'Hexagon', d:'M50 3L91 26.5V73.5L50 97L9 73.5V26.5Z'},
+    {id:'diamond', name:'Diamond', d:'M50 2L98 50L50 98L2 50Z'},
+    {id:'shield', name:'Shield', d:'M50 3L90 16V50C90 74 72 90 50 98C28 90 10 74 10 50V16Z'}
+  ];
+  var SMAP = {}; SHAPES.forEach(function(s){ SMAP[s.id]=s; });
+
+  var LAYOUTS = [
+    {id:'stack', name:'Stacked'}, {id:'inline', name:'Side by side'},
+    {id:'text', name:'Text only'}, {id:'icon', name:'Symbol only'}
+  ];
+
+  var FONTS = ['Bricolage Grotesque','Syne','Fraunces','Playfair Display','Cormorant Garamond','Archivo Black','Bebas Neue','Oswald','Poppins','DM Sans','Space Mono','Righteous','Pacifico'];
+  var FONT_QS = 'Archivo+Black|Bebas+Neue|Bricolage+Grotesque:wght@500;700|Cormorant+Garamond:wght@500;700|DM+Sans:wght@500;700|Fraunces:wght@500;700|Oswald:wght@500;700|Pacifico|Playfair+Display:wght@500;700|Poppins:wght@500;700|Righteous|Space+Mono:wght@400;700|Syne:wght@500;700';
+
+  var PALS = [
+    {n:'Harbor',  c:{bg:'#F4F6F8',box:'#12355B',glyph:'#F4F6F8',text:'#12355B',tag:'#5B7388'}},
+    {n:'Ember',   c:{bg:'#FFF4EA',box:'#E4572E',glyph:'#FFF4EA',text:'#2B1A14',tag:'#8A5A44'}},
+    {n:'Moss',    c:{bg:'#EEF1E6',box:'#2F4A35',glyph:'#E7EFD5',text:'#2F4A35',tag:'#6E8062'}},
+    {n:'Plum',    c:{bg:'#1E1530',box:'#F2B5D4',glyph:'#1E1530',text:'#F7ECF3',tag:'#B79AC6'}},
+    {n:'Graphite',c:{bg:'#16181D',box:'#FFC857',glyph:'#16181D',text:'#F4F1E8',tag:'#9A978C'}},
+    {n:'Cobalt',  c:{bg:'#FFFFFF',box:'#2F4BFF',glyph:'#FFFFFF',text:'#0E1A66',tag:'#6573C9'}},
+    {n:'Sand',    c:{bg:'#F3E9DC',box:'#C08552',glyph:'#F3E9DC',text:'#4B2E1E',tag:'#8C6A52'}},
+    {n:'Lagoon',  c:{bg:'#E6F4F1',box:'#0B7A75',glyph:'#E6F4F1',text:'#063E3B',tag:'#4C8F8B'}},
+    {n:'Mono',    c:{bg:'#FFFFFF',box:'#111111',glyph:'#FFFFFF',text:'#111111',tag:'#777777'}},
+    {n:'Berry',   c:{bg:'#FFF0F3',box:'#B3134A',glyph:'#FFF0F3',text:'#4A0D23',tag:'#A55D75'}}
+  ];
+  function pal(n){ for(var i=0;i<PALS.length;i++){ if(PALS[i].n===n) return PALS[i]; } return PALS[0]; }
+
+  var PRESETS = [
+    {n:'Harbor', pal:'Harbor',  glyph:'wave',     shape:'circle',  layout:'stack',  font:'Bricolage Grotesque', bold:true,  upper:false, ls:0,  nameSize:56, iconSize:120, gap:20, glyphScale:.58, outline:false, radius:0},
+    {n:'Kiln',   pal:'Ember',   glyph:'flame',    shape:'rounded', layout:'inline', font:'Fraunces',            bold:true,  upper:false, ls:0,  nameSize:60, iconSize:100, gap:22, glyphScale:.6,  outline:false, radius:0},
+    {n:'Grove',  pal:'Moss',    glyph:'leaf',     shape:'hexagon', layout:'stack',  font:'Cormorant Garamond',  bold:true,  upper:true,  ls:6,  nameSize:46, iconSize:110, gap:22, glyphScale:.55, outline:false, radius:0},
+    {n:'Volt',   pal:'Graphite',glyph:'bolt',     shape:'square',  layout:'inline', font:'Archivo Black',       bold:false, upper:true,  ls:2,  nameSize:52, iconSize:96,  gap:20, glyphScale:.62, outline:true,  radius:24},
+    {n:'Atlas',  pal:'Cobalt',  glyph:'mountain', shape:'none',    layout:'inline', font:'Syne',                bold:true,  upper:false, ls:-1, nameSize:58, iconSize:84,  gap:18, glyphScale:1,   outline:false, radius:0},
+    {n:'Lumen',  pal:'Plum',    glyph:'spark',    shape:'rounded', layout:'stack',  font:'Poppins',             bold:true,  upper:false, ls:0,  nameSize:50, iconSize:110, gap:18, glyphScale:.58, outline:false, radius:0},
+    {n:'Paws',   pal:'Sand',    glyph:'paw',      shape:'circle',  layout:'inline', font:'Righteous',           bold:false, upper:false, ls:1,  nameSize:54, iconSize:96,  gap:20, glyphScale:.58, outline:false, radius:0},
+    {n:'Folio',  pal:'Mono',    glyph:'book',     shape:'square',  layout:'stack',  font:'Playfair Display',    bold:true,  upper:false, ls:0,  nameSize:52, iconSize:104, gap:20, glyphScale:.6,  outline:false, radius:0}
+  ];
+
+  var SLIDERS = [
+    {k:'glyphScale', tab:'symbol', label:'Symbol size inside container', min:.3, max:1, step:.02, fmt:function(v){ return Math.round(v*100)+'%'; }},
+    {k:'iconSize',   tab:'symbol', label:'Container size', min:48, max:240, step:2, fmt:function(v){ return v+' px'; }},
+    {k:'nameSize',   tab:'text',   label:'Name size', min:24, max:120, step:1, fmt:function(v){ return v+' px'; }},
+    {k:'ls',         tab:'text',   label:'Letter spacing', min:-4, max:24, step:.5, fmt:function(v){ return v+' px'; }},
+    {k:'radius',     tab:'color',  label:'Background corner radius', min:0, max:80, step:1, fmt:function(v){ return v+' px'; }},
+    {k:'gap',        tab:'layout', label:'Gap between symbol and text', min:0, max:80, step:1, fmt:function(v){ return v+' px'; }},
+    {k:'pad',        tab:'layout', label:'Padding around logo', min:16, max:120, step:2, fmt:function(v){ return v+' px'; }}
+  ];
+
+  /* ---------- State ---------- */
+  var KEY = 'markbench:v1';
+  var state = {
+    brand:'Harbor Lane', tagline:'Coffee & Provisions', pad:56, transparent:false, colors:{}
+  };
+  function applyPreset(p){
+    var keys = ['glyph','shape','layout','font','bold','upper','ls','nameSize','iconSize','gap','glyphScale','outline','radius'];
+    keys.forEach(function(k){ state[k]=p[k]; });
+    state.transparent=false;
+    state.colors = Object.assign({}, pal(p.pal).c);
+    if(state.shape==='none' || state.outline){ state.colors.glyph = state.colors.box; }
+  }
+  applyPreset(PRESETS[0]);
+  try{
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if(saved && typeof saved==='object'){
+      Object.keys(state).forEach(function(k){ if(saved[k]!==undefined && k!=='colors') state[k]=saved[k]; });
+      if(saved.colors) state.colors = Object.assign({}, state.colors, saved.colors);
+      if(!GMAP[state.glyph]) state.glyph='wave';
+      if(!SMAP[state.shape]) state.shape='circle';
+      if(FONTS.indexOf(state.font)<0) state.font=FONTS[0];
+    }
+  }catch(e){}
+
+  /* ---------- Measuring ---------- */
+  var mctx = document.createElement('canvas').getContext('2d');
+  var hasLS = ('letterSpacing' in mctx);
+  function fontStr(size, weight, font){ return weight+' '+size+'px "'+font+'", sans-serif'; }
+  function measure(str, size, weight, font, ls){
+    mctx.font = fontStr(size, weight, font);
+    var w;
+    if(hasLS){ mctx.letterSpacing = ls+'px'; w = mctx.measureText(str).width - ls; mctx.letterSpacing='0px'; }
+    else { w = mctx.measureText(str).width + ls*(str.length-1); }
+    return Math.max(0, w);
+  }
+  function roundRectPath(W,H,r){
+    r = Math.min(r, W/2, H/2);
+    if(r<=0) return 'M0 0H'+W+'V'+H+'H0Z';
+    return 'M'+r+' 0H'+(W-r)+'A'+r+' '+r+' 0 0 1 '+W+' '+r+'V'+(H-r)+'A'+r+' '+r+' 0 0 1 '+(W-r)+' '+H+
+      'H'+r+'A'+r+' '+r+' 0 0 1 0 '+(H-r)+'V'+r+'A'+r+' '+r+' 0 0 1 '+r+' 0Z';
+  }
+
+  /* ---------- Layout: state -> list of drawing ops ---------- */
+  function layout(s){
+    var C = s.colors, w = s.bold ? 700 : 500;
+    var nameStr = s.upper ? s.brand.toUpperCase() : s.brand;
+    var tagStr = (s.tagline||'').toUpperCase();
+    var hasIcon = s.layout!=='text' && (s.glyph!=='none' || s.shape!=='none');
+    var wantText = s.layout!=='icon';
+    var hasName = wantText && nameStr.trim().length>0;
+    var hasTag = wantText && tagStr.trim().length>0;
+    var hasText = hasName || hasTag;
+    var S = +s.iconSize, N = +s.nameSize, T = Math.max(10, Math.round(N*0.3)), G = +s.gap, P = +s.pad;
+    var tagLs = T*0.22;
+    var nameW = hasName ? measure(nameStr, N, w, s.font, +s.ls) : 0;
+    var tagW = hasTag ? measure(tagStr, T, 500, s.font, tagLs) : 0;
+    var tw = Math.max(nameW, tagW);
+    var textH = (hasName ? N : 0) + (hasTag ? (hasName ? T*0.4 : 0) + T : 0);
+    var cw, ch, ix=0, iy=0, tx=0, ty=0, center=true;
+    if(hasIcon && hasText){
+      if(s.layout==='inline'){ cw=S+G+tw; ch=Math.max(S,textH); iy=(ch-S)/2; ty=(ch-textH)/2; tx=S+G; center=false; }
+      else { cw=Math.max(S,tw); ch=S+G+textH; ix=(cw-S)/2; ty=S+G; }
+    } else if(hasIcon){ cw=S; ch=S; }
+    else if(hasText){ cw=tw; ch=textH; }
+    else { cw=S; ch=S; }
+    var W = cw+2*P, H = ch+2*P, ops=[];
+    if(!s.transparent){ ops.push({t:'path', d:roundRectPath(W,H,+s.radius), x:0, y:0, s:1, fill:C.bg}); }
+    if(hasIcon){
+      var ox=P+ix, oy=P+iy, shp=SMAP[s.shape];
+      if(shp && shp.d){
+        if(s.outline) ops.push({t:'path', d:shp.d, x:ox, y:oy, s:S/100, stroke:C.box, sw:6});
+        else ops.push({t:'path', d:shp.d, x:ox, y:oy, s:S/100, fill:C.box});
+      }
+      var k = +s.glyphScale;
+      if(s.glyph==='initial'){
+        var ch0 = (nameStr.trim().charAt(0) || 'A').toUpperCase(), fs = S*k*1.1;
+        ops.push({t:'text', str:ch0, x:ox+S/2, y:oy+S/2+fs*0.36, size:fs, weight:w, font:s.font, ls:0, fill:C.glyph, anchor:'middle'});
+      } else if(s.glyph!=='none'){
+        ops.push({t:'path', d:GMAP[s.glyph].d, x:ox+S*(1-k)/2, y:oy+S*(1-k)/2, s:S/100*k, fill:C.glyph});
+      }
+    }
+    if(hasText){
+      var baseX = function(lw){ return P + (center ? (cw-lw)/2 : tx); };
+      var top = P + ty;
+      if(hasName) ops.push({t:'text', str:nameStr, x:baseX(nameW), y:top+N*0.8, size:N, weight:w, font:s.font, ls:+s.ls, fill:C.text, anchor:'start'});
+      if(hasTag){
+        var tTop = top + (hasName ? N + T*0.4 : 0);
+        ops.push({t:'text', str:tagStr, x:baseX(tagW), y:tTop+T*0.8, size:T, weight:500, font:s.font, ls:tagLs, fill:C.tag, anchor:'start'});
+      }
+    }
+    return {W:W, H:H, ops:ops};
+  }
+
+  /* ---------- Renderers ---------- */
+  function r2(n){ return Math.round(n*100)/100; }
+  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function toSVG(m, opt){
+    opt = opt || {};
+    var out = '';
+    m.ops.forEach(function(o){
+      if(o.t==='path'){
+        out += '<path d="'+o.d+'" transform="translate('+r2(o.x)+' '+r2(o.y)+') scale('+Math.round(o.s*10000)/10000+')" fill-rule="evenodd" '+
+          (o.stroke ? 'fill="none" stroke="'+o.stroke+'" stroke-width="'+o.sw+'" stroke-linejoin="round"' : 'fill="'+o.fill+'"')+'/>';
+      } else {
+        out += '<text x="'+r2(o.x)+'" y="'+r2(o.y)+'" font-family="\''+o.font+'\', sans-serif" font-size="'+r2(o.size)+'" font-weight="'+o.weight+'"'+
+          (o.ls ? ' letter-spacing="'+r2(o.ls)+'"' : '')+' text-anchor="'+o.anchor+'" fill="'+o.fill+'">'+esc(o.str)+'</text>';
+      }
+    });
+    var attrs = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+r2(m.W)+' '+r2(m.H)+'"';
+    if(opt.h){ attrs += ' width="'+r2(opt.h*m.W/m.H)+'" height="'+opt.h+'"'; }
+    if(opt.standalone){
+      attrs += ' width="'+Math.round(m.W)+'" height="'+Math.round(m.H)+'"';
+      out = '<style>@import url(\'https://fonts.googleapis.com/css2?family='+FONT_QS.split('|').filter(function(f){ return f.replace(/\+/g,' ').indexOf(state.font)===0; })[0]+'&amp;display=swap\');</style>'+out;
+    }
+    return '<svg '+attrs+'>'+out+'</svg>';
+  }
+  function drawText(g, o){
+    g.font = fontStr(o.size, o.weight, o.font);
+    g.fillStyle = o.fill; g.textBaseline='alphabetic'; g.textAlign = o.anchor==='middle' ? 'center' : 'left';
+    if(hasLS || !o.ls){
+      if(hasLS) g.letterSpacing = (o.ls||0)+'px';
+      g.fillText(o.str, o.x, o.y);
+      if(hasLS) g.letterSpacing='0px';
+    } else {
+      var x=o.x, i, c; g.textAlign='left';
+      for(i=0;i<o.str.length;i++){ c=o.str.charAt(i); g.fillText(c,x,o.y); x+=g.measureText(c).width+o.ls; }
+    }
+  }
+  function toCanvas(m, px){
+    var sc = px/m.W, c = document.createElement('canvas');
+    c.width = Math.round(px); c.height = Math.max(1, Math.round(m.H*sc));
+    var g = c.getContext('2d'); g.scale(sc, sc);
+    m.ops.forEach(function(o){
+      if(o.t==='path'){
+        var p = new Path2D(o.d);
+        g.save(); g.translate(o.x, o.y); g.scale(o.s, o.s);
+        if(o.stroke){ g.lineWidth=o.sw; g.strokeStyle=o.stroke; g.lineJoin='round'; g.stroke(p); }
+        else { g.fillStyle=o.fill; g.fill(p, 'evenodd'); }
+        g.restore();
+      } else { drawText(g, o); }
+    });
+    return c;
+  }
+
+  /* ---------- Controls ---------- */
+  var elArt=$('#art'), elStage=$('#stage'), elStatus=$('#status');
+  var ui = {};
+
+  function glyphThumb(g){
+    if(g.id==='initial') return '<svg viewBox="0 0 100 100" aria-hidden="true"><text x="50" y="72" text-anchor="middle" font-size="72" font-weight="700" fill="currentColor" font-family="Bricolage Grotesque, sans-serif">A</text></svg>';
+    if(g.id==='none') return '<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="34" fill="none" stroke="currentColor" stroke-width="7"/><path d="M26 74L74 26" stroke="currentColor" stroke-width="7"/></svg>';
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="'+g.d+'" fill="currentColor" fill-rule="evenodd"/></svg>';
+  }
+  function buildControls(){
+    var box = $('#glyphs');
+    GLYPHS.forEach(function(g){
+      var b = document.createElement('button'); b.type='button'; b.className='glyph'; b.dataset.seg='glyph'; b.dataset.val=g.id;
+      b.title=g.name; b.setAttribute('aria-label', g.name); b.innerHTML = glyphThumb(g); box.appendChild(b);
+    });
+    var sh = $('#shapes');
+    SHAPES.forEach(function(s){
+      var b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.seg='shape'; b.dataset.val=s.id; b.textContent=s.name; sh.appendChild(b);
+    });
+    var ly = $('#layouts');
+    LAYOUTS.forEach(function(s){
+      var b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.seg='layout'; b.dataset.val=s.id; b.textContent=s.name; ly.appendChild(b);
+    });
+    var pr = $('#presets');
+    PRESETS.forEach(function(p){
+      var b=document.createElement('button'); b.type='button'; b.className='chip'; b.dataset.preset=p.n; b.textContent=p.n; pr.appendChild(b);
+    });
+    var pl = $('#pals');
+    PALS.forEach(function(p){
+      var b=document.createElement('button'); b.type='button'; b.className='pal'; b.dataset.pal=p.n; b.title=p.n; b.setAttribute('aria-label','Palette '+p.n);
+      b.style.background=p.c.bg; b.innerHTML='<i style="background:'+p.c.box+'"></i><b style="background:'+p.c.text+'"></b>'; pl.appendChild(b);
+    });
+    var cs = $('#colors');
+    [['bg','Background'],['box','Container'],['glyph','Symbol'],['text','Name'],['tag','Tagline']].forEach(function(c){
+      var l=document.createElement('label'); l.setAttribute('for','c-'+c[0]); l.textContent=c[1];
+      var i=document.createElement('input'); i.type='color'; i.id='c-'+c[0]; i.dataset.color=c[0]; l.appendChild(i); cs.appendChild(l);
+    });
+    var fs = $('#font');
+    FONTS.forEach(function(f){ var o=document.createElement('option'); o.value=f; o.textContent=f; o.style.fontFamily='"'+f+'"'; fs.appendChild(o); });
+    SLIDERS.forEach(function(sl){
+      var f=document.createElement('div'); f.className='field';
+      f.innerHTML='<div class="row"><label for="s-'+sl.k+'">'+sl.label+'</label><output id="o-'+sl.k+'" for="s-'+sl.k+'"></output></div>'+
+        '<input type="range" id="s-'+sl.k+'" min="'+sl.min+'" max="'+sl.max+'" step="'+sl.step+'" data-slider="'+sl.k+'">';
+      $('#sl-'+sl.tab).appendChild(f);
+    });
+  }
+  function syncUI(){
+    document.querySelectorAll('[data-seg]').forEach(function(b){ b.setAttribute('aria-pressed', String(state[b.dataset.seg]===b.dataset.val)); });
+    document.querySelectorAll('[data-pal]').forEach(function(b){
+      var c = pal(b.dataset.pal).c, cur = state.colors;
+      b.setAttribute('aria-pressed', String(c.bg===cur.bg && c.box===cur.box && c.text===cur.text));
+    });
+    document.querySelectorAll('[data-preset]').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+    document.querySelectorAll('[data-color]').forEach(function(i){ i.value = state.colors[i.dataset.color]; });
+    SLIDERS.forEach(function(sl){ var i=$('#s-'+sl.k); i.value=state[sl.k]; $('#o-'+sl.k).textContent=sl.fmt(+state[sl.k]); });
+    $('#brand').value=state.brand; $('#tagline').value=state.tagline; $('#font').value=state.font;
+    $('#bold').checked=!!state.bold; $('#upper').checked=!!state.upper; $('#outline').checked=!!state.outline; $('#transparent').checked=!!state.transparent;
+  }
+
+  /* ---------- Render ---------- */
+  var raf = 0, saveT = 0;
+  function schedule(){ if(raf) return; raf = requestAnimationFrame(function(){ raf=0; render(); }); }
+  function render(){
+    var m = layout(state);
+    elArt.innerHTML = toSVG(m);
+    elStage.classList.toggle('chk', !!state.transparent);
+    $('#m1').innerHTML = toSVG(m,{h:56});
+    $('#m2').innerHTML = toSVG(m,{h:36});
+    $('#m3').innerHTML = toSVG(m,{h:20});
+    elArt.setAttribute('aria-label', 'Logo preview: '+(state.brand||'untitled'));
+    clearTimeout(saveT);
+    saveT = setTimeout(function(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }, 400);
+  }
+  function loadFont(){
+    var w = state.bold ? 700 : 500;
+    try{
+      Promise.all([document.fonts.load(fontStr(40,w,state.font), state.brand||'A'), document.fonts.load(fontStr(40,500,state.font), state.tagline||'A')]).then(schedule, schedule);
+    }catch(e){}
+  }
+  function say(t){ elStatus.textContent = t; }
+
+  /* ---------- Events ---------- */
+  function onSeg(key, val){
+    var prev = state.shape;
+    state[key] = val;
+    if(key==='shape'){
+      if(val==='none'){ state.glyphScale = Math.max(state.glyphScale, .9); state.colors.glyph = state.colors.box; }
+      else if(prev==='none'){ if(state.glyphScale>.8) state.glyphScale=.58; if(!state.outline) state.colors.glyph = state.colors.bg; }
+    }
+    if(key==='glyph' && val==='initial') loadFont();
+    syncUI(); schedule();
+  }
+  function setPalette(name){
+    state.colors = Object.assign({}, pal(name).c);
+    if(state.shape==='none' || state.outline){ state.colors.glyph = state.colors.box; }
+    syncUI(); schedule();
+  }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.seg){ onSeg(b.dataset.seg, b.dataset.val); }
+    else if(b.dataset.pal){ setPalette(b.dataset.pal); }
+    else if(b.dataset.preset){
+      var p = PRESETS.filter(function(x){ return x.n===b.dataset.preset; })[0];
+      applyPreset(p); syncUI(); b.setAttribute('aria-pressed','true'); loadFont(); schedule();
+    }
+    else if(b.dataset.tab){ showTab(b.dataset.tab); }
+  });
+  function showTab(id){
+    document.querySelectorAll('.tab').forEach(function(t){ t.setAttribute('aria-selected', String(t.dataset.tab===id)); });
+    document.querySelectorAll('.tabpanel').forEach(function(p){ p.hidden = (p.id !== 'tab-'+id); });
+  }
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if(t.dataset.slider){ var sl = SLIDERS.filter(function(x){ return x.k===t.dataset.slider; })[0]; state[sl.k]=+t.value; $('#o-'+sl.k).textContent=sl.fmt(+t.value); schedule(); }
+    else if(t.dataset.color){ state.colors[t.dataset.color]=t.value; schedule(); }
+    else if(t.id==='brand'){ state.brand=t.value; schedule(); }
+    else if(t.id==='tagline'){ state.tagline=t.value; schedule(); }
+  });
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if(t.id==='font'){ state.font=t.value; loadFont(); schedule(); }
+    else if(t.id==='bold'){ state.bold=t.checked; loadFont(); schedule(); }
+    else if(t.id==='upper'){ state.upper=t.checked; schedule(); }
+    else if(t.id==='outline'){ state.outline=t.checked; if(t.checked) state.colors.glyph=state.colors.box; else if(state.shape!=='none') state.colors.glyph=state.colors.bg; syncUI(); schedule(); }
+    else if(t.id==='transparent'){ state.transparent=t.checked; schedule(); }
+  });
+  $('#shuffle').addEventListener('click', function(){
+    function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+    var gl = GLYPHS.filter(function(g){ return g.id!=='none'; });
+    state.glyph = pick(gl).id;
+    state.shape = pick(SHAPES).id;
+    state.font = pick(FONTS);
+    state.layout = pick(['stack','inline']);
+    state.upper = Math.random()<.3;
+    state.bold = Math.random()<.7;
+    state.outline = state.shape!=='none' && Math.random()<.2;
+    state.glyphScale = state.shape==='none' ? 1 : .56;
+    state.ls = state.upper ? pick([2,4,6]) : pick([-1,0,0,1]);
+    state.colors = Object.assign({}, pick(PALS).c);
+    if(state.shape==='none' || state.outline) state.colors.glyph = state.colors.box;
+    state.transparent=false;
+    syncUI(); loadFont(); schedule();
+  });
+
+  /* ---------- Export ---------- */
+  var dlPromise = null;
+  function localSaver(){
+    return {save:function(req){
+      return new Promise(function(res,rej){
+        try{
+          var type = /\.svg$/i.test(req.filename) ? 'image/svg+xml' : 'application/octet-stream';
+          var blob = (req.data instanceof Blob) ? req.data : new Blob([req.data],{type:type});
+          var url = URL.createObjectURL(blob), a = document.createElement('a');
+          a.href = url; a.download = req.filename; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+          res({status:'saved'});
+        }catch(e){ rej({code:'unavailable', message:String(e)}); }
+      });
+    }};
+  }
+  function getDL(){
+    if(!dlPromise){
+      dlPromise = ((window.claude && typeof window.claude.use==='function')
+        ? Promise.resolve(window.claude.use('downloads')).catch(function(){ return null; })
+        : Promise.resolve(null)).then(function(dl){ return dl || localSaver(); });
+    }
+    return dlPromise;
+  }
+  function slug(){ return (state.brand||'logo').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'logo'; }
+  function saveFile(name, data){
+    return getDL().then(function(dl){
+      if(!dl){ say('Saving is not available in this view. Use Copy SVG instead.'); return; }
+      return dl.save({filename:name, data:data}).then(function(){ say('Saved '+name+'.'); }, function(err){
+        say(err && err.code==='declined' ? 'Save cancelled.' : 'Could not save the file. '+(err && err.message ? err.message : ''));
+      });
+    });
+  }
+  function ensureFonts(){
+    var w = state.bold ? 700 : 500;
+    return Promise.all([document.fonts.load(fontStr(40,w,state.font), state.brand||'A'), document.fonts.load(fontStr(40,500,state.font), state.tagline||'A')]).catch(function(){});
+  }
+  $('#dlPng').addEventListener('click', function(){
+    say('Rendering PNG…');
+    ensureFonts().then(function(){
+      var m = layout(state), px = +$('#pxsize').value, c = toCanvas(m, px);
+      return new Promise(function(res){ c.toBlob(res, 'image/png'); });
+    }).then(function(blob){
+      if(!blob){ say('Could not render the PNG.'); return; }
+      return saveFile(slug()+'.png', blob);
+    });
+  });
+  $('#dlSvg').addEventListener('click', function(){
+    var svg = '<?xml version="1.0" encoding="UTF-8"?>\n'+toSVG(layout(state), {standalone:true});
+    saveFile(slug()+'.svg', svg);
+  });
+  $('#copySvg').addEventListener('click', function(){
+    var svg = toSVG(layout(state), {standalone:true}), out = $('#svgout');
+    out.value = svg;
+    function fallback(){ out.hidden=false; out.focus(); out.select(); say('Copy the SVG code from the box below.'); }
+    try{
+      navigator.clipboard.writeText(svg).then(function(){ out.hidden=true; say('SVG code copied.'); }, fallback);
+    }catch(err){ fallback(); }
+  });
+  getDL().then(function(dl){
+    if(dl){ $('#dlPng').disabled=false; $('#dlSvg').disabled=false; }
+    else { $('#dlPng').hidden=true; $('#dlSvg').hidden=true; $('#pxsize').hidden=true; say('File saving is not available in this view. Copy SVG still works.'); }
+  });
+
+  /* ---------- Boot ---------- */
+  buildControls();
+  syncUI();
+  render();
+  loadFont();
+  if(document.fonts){
+    document.fonts.ready.then(schedule);
+    document.fonts.addEventListener('loadingdone', schedule);
+  }
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
